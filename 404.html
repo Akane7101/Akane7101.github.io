@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="landing">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hakurei — a Touhou music player</title>
+<meta name="description" content="A music player for Touhou doujin music, built around the catalogue: original themes, characters, circles, credits and ZUN's music collection.">
+<meta name="theme-color" content="#0f0f1e">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="Hakurei — a Touhou music player">
+<meta property="og:description" content="A music player for Touhou doujin music, built around the catalogue.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='%23e53935' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9.2Q16 7.6 29 9.2'/%3E%3Cpath d='M16 8.6v4.8'/%3E%3Cpath d='M7.6 13.4h16.8'/%3E%3Cpath d='M10.2 9 7.8 29.4'/%3E%3Cpath d='M21.8 9l2.4 20.4'/%3E%3C/g%3E%3C/svg%3E">
+
+<!--
+  Decided before the body paints, so the handoff view is the one that is styled
+  from the very first frame. Doing this at the end of <body> showed the landing
+  copy for a beat and then swapped it, which read as a flicker on the one page
+  whose entire job is to get out of the way quickly.
+-->
+<script>
+(function () {
+  var m = location.pathname.replace(/^\/+|\/+$/g, '').match(/^(album|artist|song)\/([^/]+)$/);
+  document.documentElement.dataset.mode = m ? 'handoff' : 'landing';
+  if (m) document.documentElement.dataset.kind = m[1];
+})();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- The product's own face (see app_theme.dart). A system sans here would make
+     the one public surface look like it belongs to a different product. -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* Tokens mirrored from the app (lib/app_theme.dart) so the site and the
+     product share one palette instead of the site inventing its own. */
+  :root {
+    --bg:         #0f0f1e;                  /* AppGlowBackground base   */
+    --bg-warm:    #1a151e;                  /* AppGlowBackground middle */
+    --surface:    rgba(255, 255, 255, .05); /* AppColors.glassFill      */
+    --surface-hi: rgba(255, 255, 255, .09);
+    --accent:     #e53935;                  /* AppColors.accentColor    */
+    --accent-hi:  #ef5350;                  /* AppColors.accentColorLight */
+    --ink:        #ffffff;
+    --ink-2:      #b0b0b0;                  /* AppColors.textColorSecond */
+    --ink-3:      #8f8f8f;
+    --on-accent:  #1a0507;
+    --r:          16px;
+    --ease:       cubic-bezier(.16, 1, .3, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color-scheme: dark; }
+
+  /* Browser surfaces belong to the palette too: selection, the focus ring and
+     the scrollbar are shipped by the browser but read as part of the design. */
+  ::selection { background: rgba(229, 57, 53, .42); color: #fff; }
+  :focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; border-radius: 4px; }
+  html { scrollbar-color: rgba(255, 255, 255, .22) transparent; }
+
+  body {
+    margin: 0;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: var(--ink);
+    font-family: "Lexend Deca", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* The app's glow: a crimson bloom over its two-stop background wash. */
+    background:
+      radial-gradient(115% 80% at 50% -18%, rgba(229, 57, 53, .17) 0%, rgba(229, 57, 53, 0) 62%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-warm) 56%, var(--bg) 100%);
+    background-attachment: fixed;
+  }
+
+  /* Elevation is declared once, as a shadow. There is deliberately no border:
+     a hairline under a wide soft shadow is the ghost card, and the translucent
+     fill plus the backdrop blur already carry the edge — the same way the app's
+     glass surfaces sit on its glow. */
+  .card {
+    width: 100%;
+    max-width: 22rem;
+    /* A grid item's automatic minimum size is its min-content width, which
+       stops the card ever shrinking below the widest word in a button and
+       pushes the page into horizontal overflow in a narrow window. Allowing it
+       to shrink lets the button labels wrap instead. */
+    min-width: 0;
+    padding: 26px 22px 20px;
+    border-radius: var(--r);
+    background: var(--surface);
+    backdrop-filter: blur(20px) saturate(1.25);
+    -webkit-backdrop-filter: blur(20px) saturate(1.25);
+    box-shadow: 0 22px 56px -22px rgba(0, 0, 0, .9), 0 3px 10px -4px rgba(0, 0, 0, .55);
+  }
+
+  /* The mark is the Hakurei shrine gate, drawn as exact geometry rather than
+     the ⛩️ emoji it used to be: emoji is another vendor's artwork at another
+     vendor's metrics, and it renders at a different weight on every platform.
+     The posts begin at the lintel rather than below the lower beam — starting
+     them low left three verticals crowded under the arch, and the whole gate
+     read as a stool. */
+  .mark { display: block; width: 48px; height: 48px; margin: 0 0 14px; color: var(--accent-hi); }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 1.4375rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -.025em;
+    text-wrap: balance;
+  }
+
+  p { margin: 0; }
+
+  .lead {
+    font-size: .9375rem;
+    line-height: 1.6;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+
+  .actions { display: grid; gap: 8px; margin-top: 20px; }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;              /* touch target floor */
+    padding: 0 18px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: .9375rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    text-align: center;
+    text-decoration: none;
+    transition: transform .16s var(--ease), background-color .16s ease, box-shadow .16s ease;
+  }
+
+  .btn .i { flex: none; width: 18px; height: 18px; }
+
+  /* Dark ink on the accent, not white: at #e53935 white lands at 4.2:1 (under
+     the 4.5:1 body floor) while this pair clears it at 4.7:1. */
+  .btn.primary {
+    color: var(--on-accent);
+    background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+    box-shadow: 0 7px 20px -8px rgba(229, 57, 53, .8);
+  }
+  .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 11px 26px -8px rgba(229, 57, 53, .9); }
+  .btn.primary:active { transform: translateY(0); }
+
+  .btn.ghost { color: var(--ink); background: var(--surface-hi); }
+  .btn.ghost:hover { background: rgba(255, 255, 255, .14); }
+  .btn.ghost:active { background: rgba(255, 255, 255, .11); }
+
+  /* Which item the link points at. The id is set in tabular figures so a
+     three-digit and a four-digit id both sit flush right. */
+  .target {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface);
+    font-size: .8125rem;
+  }
+  .target .i { flex: none; width: 18px; height: 18px; color: var(--accent-hi); }
+  .target .kind { font-weight: 700; }
+  .target .id {
+    margin-left: auto;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hint {
+    margin-top: 14px;
+    font-size: .8125rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+
+  /* Reserved only where the message is dynamic, so revealing it cannot shift
+     the buttons above it. */
+  .only-handoff .hint { min-height: 2.9em; }
+
+  /* Landscape phones. The card is a shade taller than a 400px-tall viewport,
+     which would put the actions below the fold on the one page that most needs
+     them reachable without scrolling. */
+  @media (max-height: 560px) {
+    .card { padding: 18px 20px 14px; }
+    .mark { width: 38px; height: 38px; margin-bottom: 10px; }
+    h1 { font-size: 1.25rem; }
+    .actions { margin-top: 16px; }
+    .hint { margin-top: 12px; min-height: 0; }
+  }
+
+  /* Mode switching. Both views ship in the HTML, so each reads correctly with
+     scripting unavailable and neither is assembled from strings in JS. */
+  .only-handoff, [data-mode="handoff"] .only-landing { display: none; }
+  [data-mode="handoff"] .only-handoff { display: grid; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* One authored moment: the gate draws itself, then the card settles. */
+    .card { animation: settle .58s var(--ease) both; }
+    .mark path {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: draw .72s var(--ease) .1s forwards;
+    }
+    .hint.show { animation: fade-in .38s var(--ease) both; }
+  }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(14px); }
+  }
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Icons are authored geometry in one stroke weight, not an icon font or
+     emoji. They all share a 24-unit box and are drawn at one size, so the
+     rendered stroke weight is identical across the set. -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="i-globe" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.6"/>
+      <path d="M3.4 12h17.2"/>
+      <path d="M12 3.4c2.3 2.3 3.5 5.3 3.5 8.6s-1.2 6.3-3.5 8.6c-2.3-2.3-3.5-5.3-3.5-8.6S9.7 5.7 12 3.4z"/>
+    </g>
+  </symbol>
+  <symbol id="i-launch" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 4.2h4.8v4.8"/>
+      <path d="M19.8 4.2 11.4 12.6"/>
+      <path d="M18.6 14v5.1c0 .9-.7 1.6-1.6 1.6H5.2c-.9 0-1.6-.7-1.6-1.6V7.1c0-.9.7-1.6 1.6-1.6h5.1"/>
+    </g>
+  </symbol>
+  <symbol id="i-track" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.6 10.4v3.2"/>
+      <path d="M7.8 6.4v11.2"/>
+      <path d="M12 8.6v6.8"/>
+      <path d="M16.2 4.6v14.8"/>
+      <path d="M20.4 10.8v2.4"/>
+    </g>
+  </symbol>
+  <symbol id="i-album" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.6"/>
+      <circle cx="12" cy="12" r="2.5"/>
+    </g>
+  </symbol>
+  <symbol id="i-artist" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="7.8" r="3.6"/>
+      <path d="M4.9 20.2a7.1 7.1 0 0 1 14.2 0"/>
+    </g>
+  </symbol>
+</svg>
+
+<main class="card">
+  <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+    <g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+      <path pathLength="1" d="M3 9.2Q16 7.6 29 9.2"/>
+      <path pathLength="1" d="M16 8.6v4.8"/>
+      <path pathLength="1" d="M7.6 13.4h16.8"/>
+      <path pathLength="1" d="M10.2 9 7.8 29.4"/>
+      <path pathLength="1" d="M21.8 9 24.2 29.4"/>
+    </g>
+  </svg>
+
+  <!-- ── Handoff: reached from a shared /album|artist|song/<id> link ────── -->
+  <div class="only-handoff">
+    <h1>Opening in Hakurei…</h1>
+    <p class="lead">Handing this off to the app.</p>
+
+    <div class="target">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-track"/></svg>
+      <span class="kind">Track</span>
+      <span class="id" id="target-id"></span>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" id="open" href="#">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-launch"/></svg>
+        <span>Open in Hakurei</span>
+      </a>
+      <!-- The fallback used to offer the APK. The build is closed source for
+           now, so a download link would 404 for every visitor; the collection
+           it plays is public, so this points there instead. -->
+      <a class="btn ghost" href="https://151.80.40.155/" target="_blank" rel="noreferrer noopener">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-globe"/></svg>
+        <span>Browse the collection</span>
+      </a>
+    </div>
+
+    <p class="hint" id="hint" role="status" aria-live="polite"></p>
+  </div>
+
+  <!-- ── Landing: the site root, and any path that is not a deeplink ────── -->
+  <div class="only-landing">
+    <h1>Hakurei</h1>
+    <p class="lead">
+      A player for the Touhou Lossless Music Collection that treats the catalogue as
+      part of the music — original themes, characters, circles, credits, and ZUN's
+      music collection.
+    </p>
+
+    <div class="actions">
+      <a class="btn primary" href="https://151.80.40.155/" target="_blank" rel="noreferrer noopener">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-globe"/></svg>
+        <span>Browse the collection</span>
+      </a>
+    </div>
+
+    <p class="hint">The catalogue, browsable and playable in the browser.</p>
+  </div>
+</main>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  if (root.dataset.mode !== 'handoff') return;
+
+  var KINDS = {
+    album:  { label: 'Album',  icon: 'i-album'  },
+    artist: { label: 'Artist', icon: 'i-artist' },
+    song:   { label: 'Track',  icon: 'i-track'  }
+  };
+
+  var parts = location.pathname.replace(/^\/+|\/+$/g, '').split('/');
+  var kind = parts[0];
+  var id = decodeURIComponent(parts.slice(1).join('/'));
+
+  // ?t= is the seek offset a track link carries; it stays on the app URL so a
+  // shared moment in a song still lands on that moment.
+  var appUrl = 'touhouplayer://open/' + kind + '/' + id + location.search;
+
+  var meta = KINDS[kind];
+  document.querySelector('.target .kind').textContent = meta.label;
+  document.querySelector('.target .i use').setAttribute('href', '#' + meta.icon);
+  document.getElementById('target-id').textContent = id;
+  document.title = meta.label + ' ' + id + ' — Hakurei';
+
+  var open = document.getElementById('open');
+  open.href = appUrl;
+
+  var hint = document.getElementById('hint');
+  function say(text) {
+    hint.textContent = text;
+    hint.classList.add('show');
+  }
+
+  // Nothing to hand off to on a desktop or iOS browser, so say that instead of
+  // launching, waiting, and then implying the app is missing.
+  if (!/Android/i.test(navigator.userAgent)) {
+    say('Links like this open in the Hakurei app on Android.');
+    return;
+  }
+
+  // Verified App Links open the app directly and this page never runs. Reaching
+  // here means the association did not match, so the launch below is the
+  // fallback, and we only claim failure once the page is still visible.
+  var launched = false;
+  function onHide() {
+    if (document.hidden) launched = true;
+  }
+  document.addEventListener('visibilitychange', onHide);
+
+  window.setTimeout(function () {
+    if (launched || document.hidden) return;
+    say('Hakurei doesn\u2019t look installed on this device.');
+  }, 1400);
+
+  // Harmless where the scheme is unknown: the browser ignores it rather than
+  // erroring, so nothing is shown to the visitor either way.
+  window.setTimeout(function () { location.href = appUrl; }, 220);
+})();
+</script>
+</body>
+</html>

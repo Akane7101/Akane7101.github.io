@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.touhouplayer",
+      "sha256_cert_fingerprints": [
+        "DB17BDBD8A1113C2E8B427653128F8729227F29FD436C2287D1911A98F6A1557"
+      ]
+    }
+  }
+]
